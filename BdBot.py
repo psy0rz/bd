@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 
 import state
-
+import asyncio
 
 class BdBot(state.State):
     def __init__(self):
@@ -28,8 +28,10 @@ class BdBot(state.State):
 
 
         # Initialize bot and dispatcher
-        self.bot = Bot(token=self.state.token)
-        self.dp = Dispatcher(self.bot)
+        self.loop = asyncio.get_event_loop()
+        self.bot = Bot(token=self.state.token, loop=self.loop)
+        self.dp = Dispatcher(self.bot, loop=self.loop)
+        self.task_queue=[]
 
         @self.dp.message_handler(commands=['join'])
         async def handle_join(message: types.Message):
@@ -47,6 +49,13 @@ class BdBot(state.State):
                 self.save()
                 await message.reply("Left")
 
+        @self.dp.message_handler(commands=['quit'])
+        async def handle_quit(message: types.Message):
+            await self.send_message_joined("quitting on request")
+            await asyncio.sleep(1)
+            self.loop.stop()
+
+
     async def on_startup(self,dispatcher, url=None, cert=None):
         await self.send_message_joined("Started: {}".format(platform.node()))
 
@@ -58,5 +67,16 @@ class BdBot(state.State):
         for chat_id in self.state.joined_ids:
             await self.bot.send_message(chat_id, text)
 
+    async def _send_queued(self):
+        while True:
+            await asyncio.sleep(1)
+            while len(self.task_queue)!=0:
+                task=self.task_queue.pop()
+                await task
+
+    def send_message_joined_sync(self, text):
+        self.task_queue.append(self.send_message_joined(text))
+
     def run(self):
-        executor.start_polling(self.dp, skip_updates=True, on_startup=self.on_startup, on_shutdown=self.on_shutdown)
+        self.loop.create_task(self._send_queued())
+        executor.start_polling(self.dp, skip_updates=True, on_startup=self.on_startup, on_shutdown=self.on_shutdown,loop=self.loop)

@@ -1,0 +1,2 @@
+aiogram~=2.12.1
+pynput==1.6.8

